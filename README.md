@@ -35,10 +35,23 @@ Een geavanceerde, interactieve Modbus RTU master implementatie voor ESP32 C3 mic
 3. **Test specific slave ID** - Test individuele apparaten
 4. **Test different baud rates** - Baud rate diagnostics
 5. **Read specific registers** - Targeted register reading
-6. **Write to register** - Register modificatie
+6. **TEC QRS11 Heat Pump analysis** - Dedicated warmtepomp diagnostics 🔥
 7. **Show current configuration** - Systeemstatus weergave
 8. **Change settings** - Runtime configuratie aanpassing
 9. **Help/Troubleshooting** - Uitgebreide troubleshooting gids
+
+### 🏠 **TEC QRS11 Heat Pump Ondersteuning**
+- **Automatische herkenning** van TEC warmtepompen tijdens auto-detectie
+- **Dedicated TEC analyse mode** (Menu optie 6) met:
+  - Automatische 8E2 configuratie (8 data, Even parity, 2 stop bits)
+  - Real-time temperatuur monitoring (Inlet/Outlet/Ambient/Suction/Discharge)
+  - Druk sensoren (Low/High pressure side)
+  - Systeem status (Heating/Cooling/Defrost/Standby/DHW/etc.)
+  - Alarm status monitoring (AL01-AL19)
+  - Compressor frequency en pump PWM waarden
+  - DHW (Domestic Hot Water) configuratie parameters
+- **Intelligente detectie** met confidence scoring
+- **Veilige monitoring** - alleen read-only operaties
 
 ## 🔌 Hardware Specificaties
 
@@ -66,9 +79,10 @@ GND      → Common Ground
 | **Modbus Library** | ModbusMaster v2.0.1 |
 | **LED Library** | FastLED v3.6.0 |
 | **Baud Rates** | 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200 |
-| **Serial Formats** | 8N1, 8E1, 8O1, 8N2, 7E1, 7O1 |
+| **Serial Formats** | 8N1, 8E1, 8E2 (TEC), 8O1, 8N2, 7E1, 7O1 |
 | **Slave ID Range** | 1-247 |
 | **Monitor Speed** | 115200 bps |
+| **TEC QRS11 Support** | ✅ Dedicated heat pump analysis |
 
 ## 🚀 Installatie & Setup
 
@@ -141,6 +155,21 @@ Voor RS485 communicatie:
    - ✅ Device found
    - 🔴 No device found
 
+### **TEC QRS11 Heat Pump Quick Start**
+
+1. **Selecteer Optie 6**: "TEC QRS11 Heat Pump analysis"
+2. **Voer Slave ID in**: Meestal 1 of 2
+3. **Automatische configuratie**: Scanner stelt automatisch 8E2 in
+4. **Bekijk live data**: Temperaturen, druk, alarms, systeem status
+
+**TEC Specifieke Waarden:**
+```
+🌡️  B1 Inlet: 45.2°C     📊 Low Pressure: 2.3 bar
+🌡️  B2 Outlet: 48.7°C    📊 High Pressure: 18.5 bar
+🌡️  T2 Ambient: 12.4°C   ⚡ Compressor: 45 Hz
+🎯 Unit State: Heating    🟡 Y3 Pump PWM: 87.5%
+```
+
 ### **Auto-Detectie Proces**
 ```
 Phase 1: Quick ID scan (IDs 1-10)
@@ -167,6 +196,8 @@ Menu Option 8: Change Settings
 | **Timeout errors** | Verkeerde baud rate | Gebruik auto-detectie of probeer andere baud rates |
 | **CRC errors** | Slechte kabelkwaliteit | Gebruik twisted pair kabels, check lengte |
 | **LED knippert rood** | Communicatie fout | Check voeding, GND verbinding |
+| **TEC niet gedetecteerd** | Verkeerde serial config | Probeer handmatig 8E2 (Menu optie 6) |
+| **Temperatuur waarden 0** | Sensor storing | Check TEC alarmen via discrete inputs |
 
 ### **Bedrading Checklist**
 - ✅ **RX/TX**: Cross-connected (RX→TX, TX→RX)
@@ -190,6 +221,21 @@ Menu Option 8: Change Settings
 readHoldingRegisters(slaveId, 100, 10);    // Registers 100-109
 readInputRegisters(slaveId, 0, 5);         // Input registers 0-4
 readCoils(slaveId, 0, 16);                 // Coils 0-15
+```
+
+### **TEC QRS11 Register Examples**
+```cpp
+// TEC Temperature readings (Input Registers)
+readInputRegisters(slaveId, 1, 1);         // B1 Inlet Temperature (0.1°C)
+readInputRegisters(slaveId, 2, 1);         // B2 Outlet Temperature (0.1°C)
+readInputRegisters(slaveId, 20, 1);        // Unit State (1=Heating, 2=Cooling, etc.)
+
+// TEC Configuration (Holding Registers - READ ONLY)
+readHoldingRegisters(slaveId, 62, 1);      // ST02 Heating mode temperature
+readHoldingRegisters(slaveId, 79, 1);      // ST09 DHW temperature setup
+
+// TEC Alarms (Discrete Inputs)
+readDiscreteInputs(slaveId, 1, 8);         // AL01-AL08 alarm status
 ```
 
 ### **Batch Operations**
@@ -225,6 +271,12 @@ Het systeem biedt gedetailleerde error codes:
 - **v1.1.0**: WS2812 LED status indicators toegevoegd
 - **v1.2.0**: Auto-detectie algoritmes geïmplementeerd
 - **v1.3.0**: Uitgebreide error handling en diagnostics
+- **v1.4.0**: TEC QRS11 Heat Pump ondersteuning toegevoegd
+  - Dedicated TEC analyse menu (optie 6)
+  - 8E2 serial configuratie ondersteuning
+  - Automatische TEC detectie in auto-detect mode
+  - Real-time warmtepomp monitoring
+  - Alarm status en systeem state weergave
 
 ### **Updating**
 ```bash
@@ -264,6 +316,7 @@ Dit project is gelicenseerd onder de MIT License - zie het [LICENSE](LICENSE) be
 - **ModbusMaster Library**: [4-20ma/ModbusMaster](https://github.com/4-20ma/ModbusMaster)
 - **FastLED Library**: [FastLED/FastLED](https://github.com/FastLED/FastLED)
 - **ESP32 Arduino Core**: [espressif/arduino-esp32](https://github.com/espressif/arduino-esp32)
+- **TEC QRS11 Documentation**: Community GitHub documentation voor warmtepomp register mapping
 
 ---
 
