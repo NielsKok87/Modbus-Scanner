@@ -12,6 +12,18 @@
 			"type": "shell",
 			"command": "platformio run",
 			"group": "build"
+		},
+		{
+			"label": "PlatformIO Build",
+			"type": "shell",
+			"command": "platformio run",
+			"group": "build"
+		},
+		{
+			"label": "PlatformIO Build",
+			"type": "shell",
+			"command": "platformio run",
+			"group": "build"
 		}
 	]
 }

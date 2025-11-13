@@ -267,15 +267,6 @@ Dit project is gelicenseerd onder de MIT License - zie het [LICENSE](LICENSE) be
 
 ---
 
-## 📞 Support
-
-Voor vragen, bug reports of feature requests:
-- 📧 **Email**: niels@nielskok.com
-- 🐛 **Issues**: GitHub Issues
-- 💬 **Discussions**: GitHub Discussions
-
----
-
 **Made with ❤️ for the Industrial IoT Community**
 
 > *"Modbus communication made simple and reliable"*

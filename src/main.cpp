@@ -13,7 +13,7 @@ CRGB leds[NUM_LEDS];
 // Modbus RTU configuration
 #define MODBUS_RX_PIN 20  // GPIO 20 for RX (adjust for your wiring)
 #define MODBUS_TX_PIN 21  // GPIO 21 for TX (adjust for your wiring)
-#define MODBUS_DE_PIN 2   // GPIO 2 for DE/RE (Direction Enable - optional, set to -1 if not used)
+#define MODBUS_DE_PIN -1   // GPIO 2 for DE/RE (Direction Enable - optional, set to -1 if not used)
 #define MODBUS_BAUD 9600  // Common Modbus RTU baud rate
 
 // Modbus slave configuration
@@ -57,6 +57,7 @@ void showHelp();
 void showMainMenu();
 void setLEDStatus(LEDStatus status, bool animate = true);
 void ledStatusMessage(LEDStatus status, const char* message);
+void analyzeTECHeatPump(uint8_t slaveId);
 
 // Variables for periodic reading
 unsigned long lastModbusRead = 0;
@@ -259,11 +260,12 @@ void showMainMenu() {
   Serial.println("3. Test specific slave ID");
   Serial.println("4. Test different baud rates");
   Serial.println("5. Read specific registers");
-  Serial.println("6. Write to register");
+  Serial.println("6. TEC QRS11 Heat Pump analysis");
   Serial.println("7. Show current configuration");
   Serial.println("8. Change settings");
   Serial.println("9. Help/Troubleshooting");
-  Serial.println("\nType a number (1-9) and press Enter:");
+  Serial.println("\n⚠️  NOTE: Write operations disabled for safety");
+  Serial.println("Type a number (1-9) and press Enter:");
 }
 
 void handleSerialInput() {
@@ -297,9 +299,20 @@ void handleSerialInput() {
           readSpecificRegisters();
           break;
           
-        case 6:
-          writeToRegister();
+        case 6: {
+          Serial.println("\n🔥 Starting TEC QRS11 Heat Pump analysis...");
+          Serial.println("Enter Slave ID to analyze (1-247):");
+          while (!Serial.available()) delay(10);
+          int slaveId = Serial.readStringUntil('\n').toInt();
+          if (slaveId >= 1 && slaveId <= 247) {
+            Serial1.begin(9600, SERIAL_8E2, MODBUS_RX_PIN, MODBUS_TX_PIN); // TEC specific settings
+            modbus.begin(slaveId, Serial1);
+            analyzeTECHeatPump(slaveId);
+          } else {
+            Serial.println("❌ Invalid Slave ID");
+          }
           break;
+        }
           
         case 7:
           showCurrentConfiguration();
@@ -424,22 +437,10 @@ void readSpecificRegisters() {
 }
 
 void writeToRegister() {
-  Serial.println("\nRegister Writing Setup:");
-  
-  Serial.println("Enter Slave ID (1-247):");
-  while (!Serial.available()) delay(10);
-  int slaveId = Serial.readStringUntil('\n').toInt();
-  
-  Serial.println("Enter register address:");
-  while (!Serial.available()) delay(10);
-  int address = Serial.readStringUntil('\n').toInt();
-  
-  Serial.println("Enter value to write:");
-  while (!Serial.available()) delay(10);
-  int value = Serial.readStringUntil('\n').toInt();
-  
-  Serial1.begin(MODBUS_BAUD, SERIAL_8N1, MODBUS_RX_PIN, MODBUS_TX_PIN);
-  writeSingleRegister(slaveId, address, value);
+  Serial.println("\n⚠️  WRITE OPERATIONS DISABLED FOR SAFETY");
+  Serial.println("This scanner is configured for READ-ONLY operations to prevent");
+  Serial.println("accidental modification of device registers.");
+  Serial.println("Use a dedicated configuration tool for write operations.");
 }
 
 void showCurrentConfiguration() {
@@ -478,6 +479,12 @@ void changeSettingsInteractive() {
 
 void showHelp() {
   Serial.println("\n📚 TROUBLESHOOTING HELP:");
+  
+  Serial.println("\n🔒 SAFETY NOTICE:");
+  Serial.println("   • Write operations are DISABLED to prevent accidental device modification");
+  Serial.println("   • This scanner is designed for READ-ONLY diagnostics and monitoring");
+  Serial.println("   • Use dedicated configuration tools for device programming");
+  
   Serial.println("\n🔌 Common Wiring Issues:");
   Serial.println("   • RX and TX pins swapped (RX→TX, TX→RX)");
   Serial.println("   • Missing ground connection");
@@ -593,36 +600,23 @@ void readDiscreteInputs(uint8_t slaveId, uint16_t startAddress, uint16_t quantit
   }
 }
 
-// Function to write a single holding register
+// Function to write a single holding register - DISABLED FOR SAFETY
 void writeSingleRegister(uint8_t slaveId, uint16_t address, uint16_t value) {
-  ledStatusMessage(LED_WRITING, "Writing to register...");
-  Serial.printf("\n--- Writing value %d (0x%04X) to register %d (Slave ID: %d) ---\n", 
-                value, value, address, slaveId);
-  
-  uint8_t result = modbus.writeSingleRegister(address, value);
-  
-  if (result == modbus.ku8MBSuccess) {
-    ledStatusMessage(LED_SUCCESS, "Register written successfully!");
-  } else {
-    ledStatusMessage(LED_ERROR, "Failed to write register");
-    printModbusError(result);
-  }
+  ledStatusMessage(LED_WARNING, "Write operation blocked for safety");
+  Serial.println("\n⚠️  WRITE OPERATION BLOCKED");
+  Serial.println("Write operations are disabled to prevent accidental");
+  Serial.println("modification of device registers.");
+  Serial.printf("Attempted write: Slave %d, Address %d, Value %d\n", slaveId, address, value);
 }
 
-// Function to write a single coil
+// Function to write a single coil - DISABLED FOR SAFETY
 void writeSingleCoil(uint8_t slaveId, uint16_t address, bool value) {
-  ledStatusMessage(LED_WRITING, "Writing to coil...");
-  Serial.printf("\n--- Writing %s to coil %d (Slave ID: %d) ---\n", 
-                value ? "ON" : "OFF", address, slaveId);
-  
-  uint8_t result = modbus.writeSingleCoil(address, value);
-  
-  if (result == modbus.ku8MBSuccess) {
-    ledStatusMessage(LED_SUCCESS, "Coil written successfully!");
-  } else {
-    ledStatusMessage(LED_ERROR, "Failed to write coil");
-    printModbusError(result);
-  }
+  ledStatusMessage(LED_WARNING, "Write operation blocked for safety");
+  Serial.println("\n⚠️  WRITE OPERATION BLOCKED");
+  Serial.println("Write operations are disabled to prevent accidental");
+  Serial.println("modification of device settings.");
+  Serial.printf("Attempted coil write: Slave %d, Address %d, Value %s\n", 
+                slaveId, address, value ? "ON" : "OFF");
 }
 
 // Main function to demonstrate Modbus communication
@@ -829,6 +823,7 @@ bool autoDetectSerialConfig(uint8_t slaveId, uint32_t baudRate) {
     const char* name;
   } configs[] = {
     {SERIAL_8N1, "8N1 (8 data, No parity, 1 stop)"},
+    {SERIAL_8E2, "8E2 (8 data, Even parity, 2 stop) - TEC QRS11"},
     {SERIAL_8E1, "8E1 (8 data, Even parity, 1 stop)"},
     {SERIAL_8O1, "8O1 (8 data, Odd parity, 1 stop)"},
     {SERIAL_8N2, "8N2 (8 data, No parity, 2 stop)"},
@@ -868,6 +863,155 @@ bool autoDetectSerialConfig(uint8_t slaveId, uint32_t baudRate) {
   Serial1.begin(baudRate, SERIAL_8N1, MODBUS_RX_PIN, MODBUS_TX_PIN);
   modbus.begin(slaveId, Serial1);
   return false;
+}
+
+// TEC QRS11 Heat Pump specific detection and analysis
+void analyzeTECHeatPump(uint8_t slaveId) {
+  Serial.println("\n🔥 TEC QRS11 Heat Pump Analysis");
+  Serial.println("Based on GitHub documentation for TEC QRS11");
+  Serial.println(String('=', 50));
+  
+  // Test key registers to identify TEC heat pump
+  Serial.println("🔍 Testing TEC-specific registers...");
+  
+  // Test Input Registers (key temperature sensors)
+  struct {
+    uint16_t address;
+    const char* name;
+    const char* unit;
+    float scale;
+  } tecInputRegisters[] = {
+    {1, "B1 - Inlet Temperature", "°C", 0.1},
+    {2, "B2 - Outlet Temperature", "°C", 0.1},
+    {3, "T2 - Ambient Temperature", "°C", 0.1},
+    {4, "T4 - Suction", "°C", 0.1},
+    {5, "T3 - Discharge", "°C", 0.1},
+    {6, "B6 - Low Pressure Side", "bar", 0.1},
+    {7, "B7 - High Pressure Side", "bar", 0.1},
+    {8, "Flow", "m3/h", 0.1},
+    {9, "Room Temperature", "°C", 0.1},
+    {13, "Compressor", "Hz", 1.0},
+    {14, "Y3 - Indoor pump PWM", "%", 0.1},
+    {17, "B4 - Hot Water", "°C", 0.1},
+    {18, "Operating Hours", "Hours", 1.0},
+    {20, "Unit State", "", 1.0}
+  };
+  
+  int validReadings = 0;
+  int totalTests = sizeof(tecInputRegisters) / sizeof(tecInputRegisters[0]);
+  
+  Serial.println("\n📊 INPUT REGISTERS:");
+  for (int i = 0; i < totalTests; i++) {
+    uint8_t result = modbus.readInputRegisters(tecInputRegisters[i].address, 1);
+    if (result == modbus.ku8MBSuccess) {
+      validReadings++;
+      uint16_t rawValue = modbus.getResponseBuffer(0);
+      float scaledValue = rawValue * tecInputRegisters[i].scale;
+      
+      Serial.printf("  ✅ Reg %d: %s = %.1f %s\n", 
+                    tecInputRegisters[i].address, 
+                    tecInputRegisters[i].name, 
+                    scaledValue, 
+                    tecInputRegisters[i].unit);
+                    
+      // Special handling for Unit State
+      if (tecInputRegisters[i].address == 20) {
+        const char* stateText = "Unknown";
+        switch (rawValue) {
+          case 1: stateText = "Heating"; break;
+          case 2: stateText = "Cooling"; break;
+          case 3: stateText = "Antifreeze"; break;
+          case 4: stateText = "Defrost"; break;
+          case 5: stateText = "Standby"; break;
+          case 6: stateText = "Off"; break;
+          case 7: stateText = "Starting"; break;
+          case 8: stateText = "On"; break;
+          case 9: stateText = "DHW"; break;
+        }
+        Serial.printf("       State: %s (%d)\n", stateText, rawValue);
+      }
+    } else {
+      Serial.printf("  ❌ Reg %d: %s - No response\n", 
+                    tecInputRegisters[i].address, 
+                    tecInputRegisters[i].name);
+    }
+    delay(100); // Small delay between readings
+  }
+  
+  // Test some Holding Registers (read-only for safety)
+  Serial.println("\n🎛️  HOLDING REGISTERS (Configuration):");
+  struct {
+    uint16_t address;
+    const char* name;
+    const char* unit;
+    float scale;
+  } tecHoldingRegisters[] = {
+    {61, "ST01 - Cooling mode temperature", "°C", 0.1},
+    {62, "ST02 - Heating mode temperature", "°C", 0.1},
+    {79, "ST09 - DHW temperature setup", "°C", 0.1},
+    {80, "ST10 - DHW temperature difference", "°C", 0.1}
+  };
+  
+  for (int i = 0; i < 4; i++) {
+    uint8_t result = modbus.readHoldingRegisters(tecHoldingRegisters[i].address, 1);
+    if (result == modbus.ku8MBSuccess) {
+      validReadings++;
+      uint16_t rawValue = modbus.getResponseBuffer(0);
+      float scaledValue = rawValue * tecHoldingRegisters[i].scale;
+      
+      Serial.printf("  ✅ Reg %d: %s = %.1f %s\n", 
+                    tecHoldingRegisters[i].address, 
+                    tecHoldingRegisters[i].name, 
+                    scaledValue, 
+                    tecHoldingRegisters[i].unit);
+    }
+    delay(100);
+  }
+  
+  // Test Discrete Inputs (Alarms)
+  Serial.println("\n🚨 ALARM STATUS (Discrete Inputs):");
+  const char* alarmNames[] = {
+    "AL01 - Low pressure",
+    "AL02 - High pressure", 
+    "AL03 - Low outlet water temp",
+    "", // Address 4 not used
+    "AL05 - High outlet water temp",
+    "AL17 - Water flow short",
+    "AL18 - Low pressure alarm limit",
+    "AL19 - High pressure alarm limit"
+  };
+  
+  uint8_t result = modbus.readDiscreteInputs(1, 8);
+  if (result == modbus.ku8MBSuccess) {
+    for (int i = 0; i < 8; i++) {
+      if (strlen(alarmNames[i]) > 0) {
+        bool alarmActive = modbus.getResponseBuffer(i / 16) & (1 << (i % 16));
+        Serial.printf("  %s Alarm %d: %s - %s\n", 
+                      alarmActive ? "🔴" : "✅", 
+                      i + 1,
+                      alarmNames[i],
+                      alarmActive ? "ACTIVE" : "OK");
+      }
+    }
+  }
+  
+  // Conclusion
+  float detectionRate = (float)validReadings / (totalTests + 4) * 100;
+  Serial.println(String('=', 50));
+  Serial.printf("📈 Detection Rate: %.1f%% (%d/%d registers responded)\n", 
+                detectionRate, validReadings, totalTests + 4);
+                
+  if (detectionRate > 70) {
+    ledStatusMessage(LED_SUCCESS, "TEC QRS11 Heat Pump detected!");
+    Serial.println("🎯 HIGH CONFIDENCE: This appears to be a TEC QRS11 Heat Pump!");
+    Serial.println("   Communication settings: 9600 baud, 8E2 (8 data, Even parity, 2 stop)");
+  } else if (detectionRate > 30) {
+    ledStatusMessage(LED_WARNING, "Possible TEC device detected");
+    Serial.println("⚠️  MEDIUM CONFIDENCE: Could be a TEC heat pump or compatible device");
+  } else {
+    ledStatusMessage(LED_ERROR, "Not a TEC QRS11 heat pump");
+    Serial.println("❌ LOW CONFIDENCE: This doesn't appear to be a TEC QRS11 heat pump");
+  }
 }
 
 // Comprehensive device detection and configuration
@@ -937,7 +1081,7 @@ void detectModbusDevice() {
     }
   }
   
-  // Phase 4: Get device information
+  // Phase 4: Get device information and check for TEC heat pump
   Serial.println("\n📊 Phase 4: Reading device information...");
   ledStatusMessage(LED_CONNECTING, "Reading device information...");
   
@@ -946,28 +1090,56 @@ void detectModbusDevice() {
     Serial.printf("\n--- Device Information (Slave ID: %d) ---\n", slaveId);
     modbus.begin(slaveId, Serial1);
     
-    // Try to read common registers
-    Serial.println("📋 Attempting to read common registers:");
+    // Check if this might be a TEC QRS11 Heat Pump
+    Serial.println("🔍 Checking for TEC QRS11 Heat Pump...");
     
-    // Try holding registers 0-9
-    for (int reg = 0; reg < 10; reg++) {
-      uint8_t result = modbus.readHoldingRegisters(reg, 1);
-      if (result == modbus.ku8MBSuccess) {
-        uint16_t value = modbus.getResponseBuffer(0);
-        Serial.printf("  Holding Register %d: %d (0x%04X)\n", reg, value, value);
+    // Test a few key TEC registers to see if this is a heat pump
+    bool possibleTEC = false;
+    uint8_t tecTestResult = modbus.readInputRegisters(20, 1); // Unit State register
+    if (tecTestResult == modbus.ku8MBSuccess) {
+      uint16_t unitState = modbus.getResponseBuffer(0);
+      if (unitState >= 1 && unitState <= 9) {
+        possibleTEC = true;
       }
-      delay(50);
     }
     
-    // Try input registers 0-4
-    Serial.println("📈 Input Registers:");
-    for (int reg = 0; reg < 5; reg++) {
-      uint8_t result = modbus.readInputRegisters(reg, 1);
-      if (result == modbus.ku8MBSuccess) {
-        uint16_t value = modbus.getResponseBuffer(0);
-        Serial.printf("  Input Register %d: %d (0x%04X)\n", reg, value, value);
+    // Also test temperature register
+    if (!possibleTEC) {
+      tecTestResult = modbus.readInputRegisters(2, 1); // Outlet temperature
+      if (tecTestResult == modbus.ku8MBSuccess) {
+        uint16_t temp = modbus.getResponseBuffer(0);
+        if (temp > 0 && temp < 1000) { // Reasonable temperature range in 0.1°C
+          possibleTEC = true;
+        }
       }
-      delay(50);
+    }
+    
+    if (possibleTEC) {
+      Serial.println("🎯 Possible TEC heat pump detected! Running detailed analysis...");
+      analyzeTECHeatPump(slaveId);
+    } else {
+      Serial.println("📋 Standard Modbus device - reading common registers:");
+      
+      // Try holding registers 0-9
+      for (int reg = 0; reg < 10; reg++) {
+        uint8_t result = modbus.readHoldingRegisters(reg, 1);
+        if (result == modbus.ku8MBSuccess) {
+          uint16_t value = modbus.getResponseBuffer(0);
+          Serial.printf("  Holding Register %d: %d (0x%04X)\n", reg, value, value);
+        }
+        delay(50);
+      }
+      
+      // Try input registers 0-4
+      Serial.println("📈 Input Registers:");
+      for (int reg = 0; reg < 5; reg++) {
+        uint8_t result = modbus.readInputRegisters(reg, 1);
+        if (result == modbus.ku8MBSuccess) {
+          uint16_t value = modbus.getResponseBuffer(0);
+          Serial.printf("  Input Register %d: %d (0x%04X)\n", reg, value, value);
+        }
+        delay(50);
+      }
     }
   }
   
